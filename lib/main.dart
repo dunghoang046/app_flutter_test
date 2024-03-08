@@ -1,6 +1,13 @@
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:path_provider/path_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FlutterDownloader.initialize(debug: true, ignoreSsl: true);
   runApp(const MyApp());
 }
 
@@ -61,6 +68,39 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  int progress = 0;
+
+  ReceivePort _receivePort = ReceivePort();
+
+  @pragma('vm:entry-point')
+  static downloadingCallback(id, status, progress) {
+    ///Looking up for a send port
+    SendPort? sendPort = IsolateNameServer.lookupPortByName("downloading");
+
+    ///ssending the data
+    sendPort!.send([id, status, progress]);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    ///register a send port for the other isolates
+    IsolateNameServer.registerPortWithName(
+        _receivePort.sendPort, "downloading");
+
+    ///Listening for the data is comming other isolataes
+    _receivePort.listen((message) {
+      setState(() {
+        progress = message[2];
+      });
+
+      // print(progress);
+    });
+
+    FlutterDownloader.registerCallback(downloadingCallback);
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -99,17 +139,55 @@ class _MyHomePageState extends State<MyHomePage> {
               'You have pushed the button this many times:',
             ),
             Text(
-              '$_counter',
+              '$progress',
               style: Theme.of(context).textTheme.headline4,
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        // onPressed: _incrementCounter,
+        onPressed: () async {
+          var url_file =
+              "http://eoffice.humg.edu.vn/ajaxUpload/6648/2024/52F1A778674AA2377D764BE1790C76D0.pdf";
+          var savePath = await findLocalPath();
+          final id = await FlutterDownloader.enqueue(
+              url: url_file,
+              // savedDir: externalDir!.path,
+              savedDir: savePath!,
+              fileName: "52F1A778674AA2377D764BE1790C76D0.pdf",
+              showNotification: true,
+              openFileFromNotification: true,
+              saveInPublicStorage: true,
+              allowCellular: true);
+        },
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+}
+
+Future<String?> findLocalPath() async {
+  var externalStorageDirPath;
+  if (Platform.isAndroid) {
+    try {
+      final directory = await getExternalStorageDirectory();
+      externalStorageDirPath = directory?.path;
+    } catch (e) {
+      final directory = await getExternalStorageDirectory();
+      externalStorageDirPath = directory?.path;
+    }
+  } else if (Platform.isIOS) {
+    externalStorageDirPath =
+        (await getApplicationDocumentsDirectory()).absolute.path;
+  }
+
+  String _localPath = externalStorageDirPath! + '/folder_app';
+  final savedDir = Directory(_localPath);
+  bool hasExisted = await savedDir.exists();
+  if (!hasExisted) {
+    savedDir.create();
+  }
+  return externalStorageDirPath;
 }
