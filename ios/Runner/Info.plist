@@ -45,18 +45,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-    <key>NSAllowsArbitraryLoads</key><true/>
-	<!-- changes this number to configure the maximum number of concurrent tasks -->
-	<key>FDMaximumConcurrentTasks</key>
-	<integer>5</integer>
-	<key>FDAllFilesDownloadedMessage</key>
-	<string>All files have been downloaded</string>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
-	<key>UIFileSharingEnabled</key>
-	<true/>
-</dict>
 </dict>
 </plist>
